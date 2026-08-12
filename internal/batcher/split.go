@@ -40,9 +40,15 @@ func Split(events []event.Event, cfg Config) []event.Batch {
 			return
 		}
 		seq++
+		// Copy buf into a fresh slice: each batch must own its backing
+		// array, independent of buf. Reusing buf (via buf[:0]) would
+		// alias the arrays, so later appends overwrite earlier batches'
+		// events — the batches "bleed" into each other.
+		cp := make([]event.Event, len(buf))
+		copy(cp, buf)
 		out = append(out, event.Batch{
 			Seq:     seq,
-			Events: buf,
+			Events:  cp,
 			Created: cfg.Now().UTC(),
 		})
 		buf = buf[:0]
